@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <title>پنل مدیریت</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>پنل مدیریت</h2>
+
+  <!-- فرم ورود -->
+  <form id="login-form">
+    <input type="text" id="username" placeholder="نام کاربری">
+    <input type="password" id="password" placeholder="رمز عبور">
+    <button type="submit">ورود</button>
+  </form>
+
+  <!-- بخش مدیریت -->
+  <div id="admin-panel" style="display:none;">
+    
+    <!-- افزودن بازی -->
+    <h3>افزودن بازی</h3>
+    <form id="game-form">
+      <input type="text" id="gamename" placeholder="نام بازی">
+      <input type="file" id="gamefile">
+      <button type="submit">ذخیره بازی</button>
+    </form>
+
+    <hr>
+
+    <!-- افزودن متن درباره من -->
+    <h3>متن درباره من</h3>
+    <textarea id="about-text" placeholder="متن درباره من..." rows="5" cols="40"></textarea>
+    <br>
+    <button id="save-about">ذخیره متن</button>
+
+  </div>
+
+  <script>
+    // ورود ساده
+    document.getElementById("login-form").addEventListener("submit", function(e){
+      e.preventDefault();
+      let user = document.getElementById("username").value.trim();
+      let pass = document.getElementById("password").value.trim();
+
+      if(user === "admin" && pass === "1234"){
+        document.getElementById("login-form").style.display = "none";
+        document.getElementById("admin-panel").style.display = "block";
+      } else {
+        alert("نام کاربری یا رمز عبور اشتباه است!");
+      }
+    });
+
+    // اتصال به IndexedDB
+    let db;
+    let request = indexedDB.open("GamesDB", 2);
+
+    request.onupgradeneeded = function(e){
+      db = e.target.result;
+
+      if(!db.objectStoreNames.contains("games")){
+        db.createObjectStore("games", { keyPath: "id", autoIncrement: true });
+      }
+
+      if(!db.objectStoreNames.contains("about")){
+        db.createObjectStore("about", { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = function(e){
+      db = e.target.result;
+    };
+
+    // ذخیره بازی
+    document.getElementById("game-form").addEventListener("submit", function(e){
+      e.preventDefault();
+      let name = document.getElementById("gamename").value;
+      let fileInput = document.getElementById("gamefile");
+
+      if(fileInput.files.length === 0){
+        alert("لطفاً یک فایل انتخاب کنید!");
+        return;
+      }
+
+      let file = fileInput.files[0];
+      let reader = new FileReader();
+
+      reader.onload = function(){
+        let transaction = db.transaction(["games"], "readwrite");
+        let store = transaction.objectStore("games");
+        store.add({ name: name, filename: file.name, data: reader.result });
+        alert("بازی ذخیره شد!");
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+
+    // ذخیره متن درباره من
+    document.getElementById("save-about").onclick = function(){
+      let text = document.getElementById("about-text").value;
+
+      let transaction = db.transaction(["about"], "readwrite");
+      let store = transaction.objectStore("about");
+      store.put({ id: 1, text: text });
+
+      alert("متن درباره من ذخیره شد!");
+    };
+  </script>
+</body>
+</html>
