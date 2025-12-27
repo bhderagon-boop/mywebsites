@@ -2,19 +2,13 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8">
-  <title>پنل مدیریت بازی‌ها</title>
-  <style>
-    body { font-family: Tahoma; direction: rtl; margin: 20px; }
-    input, button { margin: 5px; padding: 5px; }
-    #games-list { margin-top: 20px; }
-  </style>
-  <link rel="stylesheet" href="style.css">
+  <title>ذخیره فایل بازی</title>
 </head>
 <body>
-  <h2>پنل مدیریت بازی‌ها</h2>
+  <h2>افزودن بازی</h2>
 
   <label>نام بازی: <input type="text" id="gameName"></label><br>
-  <label>امتیاز بازی: <input type="number" id="gameScore"></label><br>
+  <label>انتخاب فایل: <input type="file" id="gameFile"></label><br>
   <button onclick="saveGame()">ذخیره بازی</button>
 
   <h3>لیست بازی‌ها</h3>
@@ -22,7 +16,7 @@
 
   <script>
     let db;
-    let request = indexedDB.open("GamesDB", 1);
+    let request = indexedDB.open("GamesDB", 2);
 
     request.onupgradeneeded = function(e) {
       db = e.target.result;
@@ -36,31 +30,28 @@
       loadGames();
     };
 
-    request.onerror = function(e) {
-      console.error("خطا در باز کردن دیتابیس:", e.target.error);
-    };
-
     function saveGame() {
       let name = document.getElementById("gameName").value;
-      let score = parseInt(document.getElementById("gameScore").value);
+      let fileInput = document.getElementById("gameFile");
+      let file = fileInput.files[0];
 
-      if (!name || isNaN(score)) {
-        alert("لطفاً نام و امتیاز بازی را وارد کنید");
+      if (!name || !file) {
+        alert("لطفاً نام بازی و فایل را وارد کنید");
         return;
       }
 
-      let transaction = db.transaction(["games"], "readwrite");
-      let store = transaction.objectStore("games");
-      store.add({ name: name, score: score });
+      let reader = new FileReader();
+      reader.onload = function() {
+        let transaction = db.transaction(["games"], "readwrite");
+        let store = transaction.objectStore("games");
+        store.add({ name: name, fileData: reader.result });
 
-      transaction.oncomplete = function() {
-        alert("✅ بازی ذخیره شد");
-        loadGames();
+        transaction.oncomplete = function() {
+          alert("✅ بازی ذخیره شد");
+          loadGames();
+        };
       };
-
-      transaction.onerror = function(e) {
-        console.error("خطا در ذخیره:", e.target.error);
-      };
+      reader.readAsDataURL(file); // فایل به صورت Base64 ذخیره می‌شود
     }
 
     function loadGames() {
@@ -75,7 +66,16 @@
         let cursor = e.target.result;
         if (cursor) {
           let li = document.createElement("li");
-          li.textContent = cursor.value.name + " - امتیاز: " + cursor.value.score;
+          li.textContent = cursor.value.name;
+
+          // اگر فایل تصویر بود، نمایش بده
+          if (cursor.value.fileData.startsWith("data:image")) {
+            let img = document.createElement("img");
+            img.src = cursor.value.fileData;
+            img.style.maxWidth = "100px";
+            li.appendChild(img);
+          }
+
           list.appendChild(li);
           cursor.continue();
         }
@@ -84,4 +84,3 @@
   </script>
 </body>
 </html>
-
