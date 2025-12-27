@@ -2,8 +2,7 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8">
-  <title>بازی‌ها</title>
-  <link rel="stylesheet" href="style.css">
+  <title>لیست بازی‌ها</title>
 </head>
 <body>
   <h2>لیست بازی‌ها</h2>
@@ -13,38 +12,40 @@
     let db;
     let request = indexedDB.open("GamesDB", 1);
 
-    request.onsuccess = function(e){
+    request.onsuccess = function(e) {
       db = e.target.result;
-      showGames();
+      loadGames();
     };
 
-    function showGames(){
+    function loadGames() {
+      let list = document.getElementById("games-list");
+      list.innerHTML = "";
+
       let transaction = db.transaction(["games"], "readonly");
       let store = transaction.objectStore("games");
-      let req = store.getAll();
+      let request = store.openCursor();
 
-      req.onsuccess = function(){
-        let games = req.result;
-        let list = document.getElementById("games-list");
-
-        games.forEach(g => {
+      request.onsuccess = function(e) {
+        let cursor = e.target.result;
+        if (cursor) {
           let li = document.createElement("li");
-          let btn = document.createElement("button");
-          btn.textContent = `دانلود: ${g.name}`;
-          btn.onclick = () => {
-            let blob = new Blob([g.data]);
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url;
-            a.download = g.filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-          };
-          li.appendChild(btn);
+          // اگر فقط نام و امتیاز ذخیره کردی
+          if (cursor.value.score !== undefined) {
+            li.textContent = cursor.value.name + " - امتیاز: " + cursor.value.score;
+          }
+          // اگر فایل ذخیره کردی
+          if (cursor.value.fileData) {
+            li.textContent = cursor.value.name;
+            if (cursor.value.fileData.startsWith("data:image")) {
+              let img = document.createElement("img");
+              img.src = cursor.value.fileData;
+              img.style.maxWidth = "100px";
+              li.appendChild(img);
+            }
+          }
           list.appendChild(li);
-        });
+          cursor.continue();
+        }
       };
     }
   </script>
