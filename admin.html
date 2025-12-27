@@ -2,22 +2,18 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8">
-  <title>مدیریت بازی‌ها</title>
+  <title>پنل مدیریت بازی‌ها</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>افزودن بازی</h2>
+  <h2>پنل مدیریت بازی‌ها</h2>
 
   <label>نام بازی: <input type="text" id="gameName"></label><br>
-  <label>انتخاب فایل: <input type="file" id="gameFile"></label><br>
   <button onclick="saveGame()">ذخیره بازی</button>
-
-  <h3>لیست بازی‌ها</h3>
-  <ul id="games-list"></ul>
 
   <script>
     let db;
-    let request = indexedDB.open("GamesDB", 3);
+    let request = indexedDB.open("GamesDB", 3); // نسخه ثابت
 
     request.onupgradeneeded = function(e) {
       db = e.target.result;
@@ -28,69 +24,32 @@
 
     request.onsuccess = function(e) {
       db = e.target.result;
-      loadGames();
+    };
+
+    request.onerror = function(e) {
+      console.error("خطا در باز کردن دیتابیس:", e.target.error);
     };
 
     function saveGame() {
       let name = document.getElementById("gameName").value;
-      let fileInput = document.getElementById("gameFile");
-      let file = fileInput.files[0];
 
-      if (!name || !file) {
-        alert("لطفاً نام بازی و فایل را وارد کنید");
+      if (!name) {
+        alert("لطفاً نام بازی را وارد کنید");
         return;
       }
 
-      let reader = new FileReader();
-      reader.onload = function() {
-        let transaction = db.transaction(["games"], "readwrite");
-        let store = transaction.objectStore("games");
-        store.add({ name: name, fileData: reader.result });
-
-        transaction.oncomplete = function() {
-          alert("✅ بازی ذخیره شد");
-          loadGames();
-        };
-      };
-      reader.readAsDataURL(file); // فایل به صورت Base64 ذخیره می‌شود
-    }
-
-    function loadGames() {
-      let list = document.getElementById("games-list");
-      list.innerHTML = "";
-
-      let transaction = db.transaction(["games"], "readonly");
+      let transaction = db.transaction(["games"], "readwrite");
       let store = transaction.objectStore("games");
-      let request = store.openCursor();
+      store.add({ name: name });
 
-      request.onsuccess = function(e) {
-        let cursor = e.target.result;
-        if (cursor) {
-          let li = document.createElement("li");
-          li.textContent = cursor.value.name;
+      transaction.oncomplete = function() {
+        alert("✅ بازی ذخیره شد");
+      };
 
-          // اگر فایل تصویر بود، نمایش بده
-          if (cursor.value.fileData.startsWith("data:image")) {
-            let img = document.createElement("img");
-            img.src = cursor.value.fileData;
-            img.style.maxWidth = "100px";
-            li.appendChild(img);
-          }
-
-          // اگر فایل متن بود، نمایش بده
-          if (cursor.value.fileData.startsWith("data:text")) {
-            let p = document.createElement("p");
-            p.textContent = cursor.value.fileData.substring(0, 100) + "...";
-            li.appendChild(p);
-          }
-
-          list.appendChild(li);
-          cursor.continue();
-        }
+      transaction.onerror = function(e) {
+        console.error("خطا در ذخیره:", e.target.error);
       };
     }
   </script>
 </body>
 </html>
-
-
