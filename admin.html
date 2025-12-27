@@ -11,6 +11,9 @@
   <label>نام بازی: <input type="text" id="gameName"></label><br>
   <button onclick="saveGame()">ذخیره بازی</button>
 
+  <h3>لیست بازی‌ها</h3>
+  <ul id="games-list"></ul>
+
   <script>
     let db;
     let request = indexedDB.open("GamesDB", 3); // نسخه ثابت
@@ -24,6 +27,7 @@
 
     request.onsuccess = function(e) {
       db = e.target.result;
+      loadGames();
     };
 
     request.onerror = function(e) {
@@ -44,10 +48,30 @@
 
       transaction.oncomplete = function() {
         alert("✅ بازی ذخیره شد");
+        loadGames(); // بعد از ذخیره دوباره لیست رو بارگذاری کن
       };
 
       transaction.onerror = function(e) {
         console.error("خطا در ذخیره:", e.target.error);
+      };
+    }
+
+    function loadGames() {
+      let list = document.getElementById("games-list");
+      list.innerHTML = "";
+
+      let transaction = db.transaction(["games"], "readonly");
+      let store = transaction.objectStore("games");
+      let request = store.openCursor();
+
+      request.onsuccess = function(e) {
+        let cursor = e.target.result;
+        if (cursor) {
+          let li = document.createElement("li");
+          li.textContent = cursor.value.name;
+          list.appendChild(li);
+          cursor.continue();
+        }
       };
     }
   </script>
